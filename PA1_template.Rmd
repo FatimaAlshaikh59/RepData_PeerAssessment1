@@ -1,25 +1,86 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Project"
+author: "Fatima Alsheikh"
+date: "January 24, 2018"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 
-## Loading and preprocessing the data
+```
 
+##Loading and preprocessing the data
+The file wil be [downloaded](d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip), unzipped and saved in the directory. The data will be read as .csv file, the date varible class will be changed into Date and a column determing the weekday will be added.
 
+```{r}
+if(!file.exists("./Project")){dir.create("./Project")}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(fileUrl,destfile="./Project/repdata.zip")
+unzip(zipfile="./Project/repdata.zip",exdir="./Project")
+mydata<- read.csv("./Project/activity.csv")
+head(mydata)
+```
 
-## What is mean total number of steps taken per day?
+##What is mean total number of steps taken per day?
+We will calculate the total number of steps taken per day, Make a histogram of the total number of steps taken each day and Calculate and report the mean and median of the total number of steps taken per day
 
+```{r}
+histdata<- aggregate(steps~ date, mydata, sum)
+head(histdata)
+hist(histdata$steps, breaks = 53, xlab = "Total number of steps taken each day", main = "Histogram of the total number of steps taken each day")
+mean<- mean(histdata$steps)
+median<- median(histdata$steps)
+mean
+median
+```
 
+##What is the average daily activity pattern?
+We will Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis) and determine the 5 min interval (on average) with maximum number of steps. 
 
-## What is the average daily activity pattern?
+```{r}
+plotdata<- aggregate(steps~ interval, mydata, FUN = function(mydata) c(mean= mean(mydata))
+)
+plot(plotdata$interval, plotdata$steps, type = "l", xlab = "interval", ylab = "number of steps", main = "average daily activity pattern")
+maximum<- plotdata[which.max(plotdata$steps),]
+maximum
+```
 
+##Imputing missing values
+The missing value will be imputed using mice package, and examine the difference before and after imputing
+```{r results='asis', echo=FALSE, include=FALSE,}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+library(mice)
+```
+```{r}
+newdata<- mice(mydata)
+summary(newdata)
+newdata<- complete(newdata)
+histnewdata<- aggregate(steps~ date, newdata, sum)
+par(mfrow = c(1,2))
+hist(histnewdata$steps, breaks = 53, xlab = "Total number of steps taken each day", main = "Histogram of imputed data")
+hist(histdata$steps, breaks = 53, xlab = "Total number of steps taken each day", main = "Histogram of original data")
+mean1<- mean(histnewdata$steps)
+median1<- median(histnewdata$steps)
+mean1
+median1
 
+difference_in_mean<- mean- mean1
+difference_in_median<- median- median1
+difference_in_mean
+difference_in_median
+```
 
-## Imputing missing values
+##Are there differences in activity patterns between weekdays and weekends?
+```{r}
+newdata$date<- as.Date(newdata$date)
+newdata$weekday<- weekdays(newdata$date)
+Weekends<- subset(newdata, weekday==c("Saturday", "Sunday"))
+Weekdays<- subset(newdata, weekday!=c("Saturday", "Sunday"))
+plotweekends<- aggregate(steps~ interval, Weekends, FUN = function(Weekends) c(mean= mean(Weekends)))
+plotweekdays<- aggregate(steps~ interval, Weekdays,  FUN = function(Weekdays) c(mean= mean(Weekdays)))
+par(mfrow= c(1,2))
 
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+plot(plotweekdays$interval, plotweekdays$steps, type = "l", xlab = "interval", ylab = "number of steps", main = "Weekdays")
+plot(plotweekends$interval, plotweekends$steps, type = "l", xlab = "interval", ylab = "number of steps", main = "Weekends")    
+```
